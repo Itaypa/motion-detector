@@ -17,6 +17,11 @@ class Presentor(multiprocessing.Process):
     def display_frame(self, frame, detections):
         if detections:
             for (x, y, w, h) in detections:
+                #blurring detection
+                roi = frame[y:y+h, x:x+w]
+                blurred_roi = cv2.GaussianBlur(roi, (15, 15), 0)  
+                frame[y:y+h, x:x+w] = blurred_roi
+                #adding rectangle
                 cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
         
         cv2.putText(frame, f'Time: {time.strftime("%H:%M:%S")}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
