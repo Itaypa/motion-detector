@@ -10,7 +10,7 @@ class Streamer(multiprocessing.Process):
         self.stop_event = multiprocessing.Event()
 
     def run(self):
-        print(f"stratring video capturing")
+        print(f"starting video capturing")
         cap = cv2.VideoCapture(self.video_path)
         while not self.stop_event.is_set():
             ret, frame = cap.read()
@@ -18,6 +18,7 @@ class Streamer(multiprocessing.Process):
                 break            
             self.frame_queue.put(frame)
         cap.release()
+        self.frame_queue.put("END")
 
     def stop(self):
         self.stop_event.set()

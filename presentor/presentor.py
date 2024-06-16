@@ -11,7 +11,11 @@ class Presentor(multiprocessing.Process):
     def run(self):
         while not self.stop_event.is_set():
             if not self.detection_queue.empty():
-                frame, detections = self.detection_queue.get()
+                data = self.detection_queue.get()
+                if isinstance(data, str) and data == 'END':
+                    self.stop()
+                    break
+                frame, detections = data
                 self.display_frame(frame, detections)
 
     def display_frame(self, frame, detections):

@@ -15,8 +15,10 @@ class Detector(multiprocessing.Process):
         while not self.stop_event.is_set():
             if not self.frame_queue.empty():
                 frame = self.frame_queue.get()
-                if frame == "END":
-                    self.detection_queue.put("END")
+                if isinstance(frame, str) and frame == 'END':
+                    print("Ended video, shutting down")
+                    self.detection_queue.put(frame)
+                    self.stop()
                     break
                 detections = self.detect_motion(frame)
                 self.detection_queue.put((frame, detections))
