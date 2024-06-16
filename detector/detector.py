@@ -1,4 +1,5 @@
 import cv2
+import imutils
 import multiprocessing
 
 class Detector(multiprocessing.Process):
@@ -7,35 +8,38 @@ class Detector(multiprocessing.Process):
         self.frame_queue = frame_queue
         self.detection_queue = detection_queue
         self.stop_event = multiprocessing.Event()
-        self.first_frame = None
+        self.min_contour_area = 500
+        self.prev_frame = None
 
     def run(self):
         while not self.stop_event.is_set():
             if not self.frame_queue.empty():
                 frame = self.frame_queue.get()
+                if frame == "END":
+                    self.detection_queue.put("END")
+                    break
                 detections = self.detect_motion(frame)
                 self.detection_queue.put((frame, detections))
 
     def detect_motion(self, frame):
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        gray = cv2.GaussianBlur(gray, (21, 21), 0)
-
-        if self.first_frame is None:
-            self.first_frame = gray
-            return None
-
-        frame_delta = cv2.absdiff(self.first_frame, gray)
-        thresh = cv2.threshold(frame_delta, 25, 255, cv2.THRESH_BINARY)[1]
+        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        if self.prev_frame is None:
+            self.prev_frame = gray_frame
+            return []
+        diff = cv2.absdiff(gray_frame, self.prev_frame)
+        thresh = cv2.threshold(diff, 25, 255, cv2.THRESH_BINARY)[1]
         thresh = cv2.dilate(thresh, None, iterations=2)
-        contours, _ = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
+        cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cnts = imutils.grab_contours(cnts)
+        self.prev_frame = gray_frame
+
         detections = []
-        for contour in contours:
-            if cv2.contourArea(contour) < 500:
+        for contour in cnts:
+            if cv2.contourArea(contour) < self.min_contour_area:
                 continue
             (x, y, w, h) = cv2.boundingRect(contour)
             detections.append((x, y, w, h))
-        
+
         return detections
 
     def stop(self):
